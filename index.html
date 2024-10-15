@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do App with Storage</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .task-list {
+            width: 60%;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .task-form {
+            width: 35%;
+        }
+
+        #taskUl {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-bottom: 5px;
+        }
+
+        .completed {
+            text-decoration: line-through;
+            color: gray;
+        }
+
+        button {
+            background: none;
+            border: none;
+            color: red;
+            cursor: pointer;
+        }
+
+        .edit-icon {
+            color: blue;
+            margin-right: 5px;
+        }
+
+        .edit-input {
+            display: none;
+            width: 60%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="task-list">
+            <h2>Task List</h2>
+            <ul id="taskUl"></ul>
+        </div>
+        <div class="task-form">
+            <h2>Add Task</h2>
+            <textarea id="taskInput" placeholder="Enter your task" rows="4"></textarea>
+        </div>
+    </div>
+
+    <script>
+        // Load tasks from local storage on page load
+        document.addEventListener("DOMContentLoaded", loadTasks);
+
+        // Listen for ENTER key in textarea
+        document.getElementById('taskInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent new line in textarea
+                const taskValue = this.value.trim();
+                if (taskValue) {
+                    addTask(taskValue);
+                    this.value = ''; // Clear input
+                }
+            }
+        });
+
+        function loadTasks() {
+            const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+            tasks.forEach(task => {
+                addTaskToDOM(task);
+            });
+        }
+
+        function addTask(task) {
+            const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+            tasks.push({ name: task, completed: false });
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            addTaskToDOM({ name: task, completed: false });
+        }
+
+        function addTaskToDOM(task) {
+            const taskUl = document.getElementById('taskUl');
+            const taskLi = document.createElement('li');
+            taskLi.className = 'task-item';
+
+            taskLi.innerHTML = `
+                <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleComplete(this)">
+                <span class="${task.completed ? 'completed' : ''}">${task.name}</span>
+                <input type="text" class="edit-input" placeholder="Update task" />
+                <div>
+                    <span class="edit-icon" onclick="editTask(this)">✎</span>
+                    <button onclick="deleteTask(this)">✖</button>
+                </div>
+            `;
+
+            taskUl.appendChild(taskLi);
+        }
+
+        function toggleComplete(checkbox) {
+            const taskLi = checkbox.parentElement;
+            const taskName = taskLi.querySelector('span').innerText;
+            const tasks = JSON.parse(localStorage.getItem('tasks'));
+
+            tasks.forEach(task => {
+                if (task.name === taskName) {
+                    task.completed = checkbox.checked;
+                }
+            });
+
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            taskLi.querySelector('span').classList.toggle('completed', checkbox.checked);
+        }
+
+        function deleteTask(button) {
+            const taskLi = button.parentElement.parentElement;
+            const taskName = taskLi.querySelector('span').innerText;
+            let tasks = JSON.parse(localStorage.getItem('tasks'));
+
+            tasks = tasks.filter(task => task.name !== taskName);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            taskLi.remove();
+        }
+
+        function editTask(editIcon) {
+            const taskLi = editIcon.parentElement.parentElement;
+            const editInput = taskLi.querySelector('.edit-input');
+            const taskName = taskLi.querySelector('span');
+            editInput.style.display = 'inline';
+            editInput.value = taskName.innerText;
+
+            editInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Prevent new line
+                    const newTaskName = this.value.trim();
+                    if (newTaskName) {
+                        updateTask(taskName.innerText, newTaskName);
+                        taskName.innerText = newTaskName;
+                        taskLi.querySelector('.completed').classList.toggle('completed', false);
+                        this.style.display = 'none'; // Hide input after editing
+                    }
+                }
+            });
+
+            // Hide input when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!taskLi.contains(event.target)) {
+                    editInput.style.display = 'none';
+                }
+            });
+        }
+
+        function updateTask(oldName, newName) {
+            const tasks = JSON.parse(localStorage.getItem('tasks'));
+            tasks.forEach(task => {
+                if (task.name === oldName) {
+                    task.name = newName;
+                }
+            });
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+    </script>
+
+</body>
+</html>
